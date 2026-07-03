@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <title>Document</title>
+  </head>
+  <body>
+    <button
+      id="test"
+      onclick="handleTest()"
+    >
+      test
+    </button>
+
+    <button
+      id="start"
+      onclick="handleStart()"
+    >
+      start
+    </button>
+    <button
+      id="stop"
+      onclick="handleStop()"
+    >
+      stop
+    </button>
+    <script>
+      let flag = true
+      let name = 'peng'
+      let obj = {
+        name: '',
+        get name() {
+          if (flag) {
+            return name
+          } else {
+            return null
+          }
+        },
+        set name(value) {
+          console.log(`%c value ----`, 'color: #fff;background-color: #000;font-size: 18px', value)
+          name = value
+        },
+      }
+      console.log('name ------', name)
+      console.log('name ------', obj)
+
+      function handleTest() {
+        flag = !flag
+      }
+    </script>
+  </body>
+</html>
