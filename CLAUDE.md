@@ -294,9 +294,9 @@ Event Loop
 包括：
 
 - [x] 数据类型
-- [ ] 原型
-- [ ] this
-- [ ] 闭包
+- [x] 原型
+- [x] this
+- [x] 闭包
 - [ ] 执行上下文
 - [ ] Event Loop
 - [ ] Promise

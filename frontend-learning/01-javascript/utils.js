@@ -43,3 +43,15 @@ function isArray(val) {
 function isFunction(cb) {
   return typeof val === 'function'
 }
+
+function test() {
+  let a = {}
+  let b = {}
+
+  return function () {
+    return a
+  }
+}
+
+const fn = test()
+fn()
