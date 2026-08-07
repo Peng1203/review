@@ -297,8 +297,8 @@ Event Loop
 - [x] 原型
 - [x] this
 - [x] 闭包
-- [ ] 执行上下文
-- [ ] Event Loop
+- [x] 执行上下文
+- [x] Event Loop
 - [ ] Promise
 - [ ] async / await
 - [ ] 垃圾回收

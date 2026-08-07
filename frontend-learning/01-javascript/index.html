@@ -28,8 +28,46 @@
     >
       stop
     </button>
+    <!-- <script>
+      let a = 1
+      let b = 2
+      console.log('a ------', a)
 
-    <script src="./04.闭包.js"></script>
+      const pro = new Promise((resolve, reject) => {
+        let proA = 3
+        console.log('proA ------', proA)
+        resolve(proA + b)
+      })
+      fetch('/').then(res => {
+        console.log('fetch res ------', res)
+      })
+      pro.then(res => {
+        console.log('then res ------', res)
+        queueMicrotask(async () => {
+          console.log('queueMicrotask ------')
+          const newVal = await Promise.resolve(666)
+          console.log('newVal ------', newVal)
+        })
+      })
+
+      requestAnimationFrame(() => {
+        console.log('requestAnimationFrame ------')
+      })
+
+      setTimeout(() => {
+        console.log('b ------', b)
+      }, 1)
+    </script> -->
+
+    <script defer>
+      let pro1 = fetch('/').then(res => res)
+      console.log(`%c pro1 ----`, 'color: #fff;background-color: #000;font-size: 18px', pro1)
+      let pro2 = new Promise(res => res(pro1)).then(res => {
+        console.log(`%c res ----`, 'color: #fff;background-color: #000;font-size: 18px', res)
+      })
+    </script>
+
+    <!-- <script src="./04.闭包.js"></script> -->
     <!-- <script>
       let flag = true
       let name = 'peng'
