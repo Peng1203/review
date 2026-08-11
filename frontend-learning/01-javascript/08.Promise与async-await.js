@@ -1,5 +1,29 @@
 'use strict'
 
+// Promise.withResolvers()
+Promise.resolve(1)
+  .then(() => 2)
+  .then(x => console.log(x)) //  打印什么？中间那次 `.then` 做了什么？
+// 打印2 中间的then 没有接收resolve中的结果而是返回了一个固定的2 之后的then 接收到的结果就是2
+
+Promise.reject('e')
+  .catch(() => {})
+  .then(x => console.log(x)) //` 打印什么？为什么？
+// 打印underfined catch 中没有返回任何数据 所以之后的then接收的参数打印出的是 und
+
+// `Promise.all([Promise.resolve(1), Promise.reject('e'), Promise.resolve(3)])` 结果是什么？
+// 失败 打印error e
+
+// 要"等所有请求都结束，逐个处理成功和失败"，用哪个方法？
+// allSettled
+
+async function f1() {
+  return await Promise.resolve(1)
+}
+async function f2() {
+  return Promise.resolve(1)
+} // 区别？
+
 // ==========================================
 // Promise 与 async/await - 练习题（共 21 题）
 // ==========================================
@@ -17,7 +41,7 @@
 // 练习 1：executor 是同步执行的
 console.log('===== 练习 1 =====')
 console.log('1')
-new Promise((resolve) => {
+new Promise(resolve => {
   console.log('2') // executor 同步？
   resolve('ok')
 })
@@ -30,14 +54,14 @@ const p2 = new Promise((resolve, reject) => {
   resolve('第一次')
   reject('第二次') // 生效吗？
 })
-p2.then((v) => console.log('fulfilled:', v))
+p2.then(v => console.log('fulfilled:', v))
 // 输出什么？reject 那次会不会造成 unhandledRejection？
 
 // 练习 3：resolve 一个 Promise 会"展开"
 console.log('\n===== 练习 3 =====')
 const inner = Promise.resolve('inner 的值')
-const outer = new Promise((resolve) => resolve(inner))
-outer.then((v) => console.log('outer 结果:', v))
+const outer = new Promise(resolve => resolve(inner))
+outer.then(v => console.log('outer 结果:', v))
 // 输出什么？outer 拿到的是 inner 这个对象，还是 'inner 的值'？
 
 // ========== 二、then 返回值规则 ==========
@@ -45,46 +69,46 @@ outer.then((v) => console.log('outer 结果:', v))
 // 练习 4：then 返回普通值
 console.log('\n===== 练习 4 =====')
 Promise.resolve(1)
-  .then((x) => x + 1)
-  .then((x) => console.log('结果:', x))
+  .then(x => x + 1)
+  .then(x => console.log('结果:', x))
 // 输出什么？
 
 // 练习 5：then 返回 Promise（展开）+ 中途抛错
 console.log('\n===== 练习 5 =====')
 Promise.resolve(1)
-  .then((x) => Promise.resolve(x * 10))
-  .then((x) => {
+  .then(x => Promise.resolve(x * 10))
+  .then(x => {
     throw new Error('boom')
   })
   .then(() => console.log('到不了这里'))
-  .catch((e) => console.log('catch:', e.message))
+  .catch(e => console.log('catch:', e.message))
 // 输出什么？哪一步被跳过了？
 
 // 练习 6：错误冒泡（跳过后续 onFulfilled）
 console.log('\n===== 练习 6 =====')
 Promise.resolve('start')
-  .then((v) => {
+  .then(v => {
     throw new Error('中途错')
   })
-  .then((v) => console.log('跳过:', v))
-  .catch((e) => console.log('捕获:', e.message))
+  .then(v => console.log('跳过:', v))
+  .catch(e => console.log('捕获:', e.message))
 // 输出什么？
 
 // 练习 7：catch 之后链路"恢复"
 console.log('\n===== 练习 7 =====')
 Promise.reject('出错')
-  .catch((e) => {
+  .catch(e => {
     console.log('捕获:', e)
     return '恢复值' // catch 返回普通值会怎样？
   })
-  .then((v) => console.log('恢复后:', v))
+  .then(v => console.log('恢复后:', v))
 // 输出什么？
 
 // 练习 8：finally 不接收值，但结果透传
 console.log('\n===== 练习 8 =====')
 Promise.resolve('原值')
   .finally(() => console.log('finally 执行'))
-  .then((v) => console.log('值:', v))
+  .then(v => console.log('值:', v))
 // 输出什么？finally 回调能拿到 "原值" 吗？
 
 // 练习 9：finally 抛错会覆盖原结果
@@ -93,69 +117,58 @@ Promise.resolve('原值')
   .finally(() => {
     throw new Error('覆盖')
   })
-  .then((v) => console.log('值:', v))
-  .catch((e) => console.log('catch:', e.message))
+  .then(v => console.log('值:', v))
+  .catch(e => console.log('catch:', e.message))
 // 输出什么？"原值" 还在吗？
 
 // ========== 三、静态方法 ==========
 
 // 练习 10：Promise.all（全部成功）
 console.log('\n===== 练习 10 =====')
-Promise.all([
-  Promise.resolve(1),
-  Promise.resolve(2),
-  Promise.resolve(3),
-]).then((arr) => console.log('all:', arr))
+Promise.all([Promise.resolve(1), Promise.resolve(2), Promise.resolve(3)]).then(arr =>
+  console.log('all:', arr),
+)
 // 输出什么？顺序是否保持输入顺序？
 
 // 练习 11：Promise.all（失败即短路）
 console.log('\n===== 练习 11 =====')
-Promise.all([
-  Promise.resolve(1),
-  Promise.reject('失败'),
-  Promise.resolve(3),
-]).then((arr) => console.log('不会到这里:', arr))
-  .catch((e) => console.log('all catch:', e))
+Promise.all([Promise.resolve(1), Promise.reject('失败'), Promise.resolve(3)])
+  .then(arr => console.log('不会到这里:', arr))
+  .catch(e => console.log('all catch:', e))
 // 输出什么？会等第三个完成吗？
 
 // 练习 12：Promise.allSettled（全部落定）
 console.log('\n===== 练习 12 =====')
-Promise.allSettled([
-  Promise.resolve('ok'),
-  Promise.reject('bad'),
-]).then((res) => console.log('settled:', JSON.stringify(res)))
+Promise.allSettled([Promise.resolve('ok'), Promise.reject('bad')]).then(res =>
+  console.log('settled:', JSON.stringify(res)),
+)
 // 输出什么？
 
 // 练习 13：Promise.race（超时控制）
 console.log('\n===== 练习 13 =====')
 function withTimeout(p, ms) {
-  return Promise.race([
-    p,
-    new Promise((_, rej) => setTimeout(() => rej(new Error('超时')), ms)),
-  ])
+  return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('超时')), ms))])
 }
 withTimeout(Promise.resolve('快点'), 100)
-  .then((v) => console.log('race:', v))
-  .catch((e) => console.log('race catch:', e.message))
+  .then(v => console.log('race:', v))
+  .catch(e => console.log('race catch:', e.message))
 // 输出什么？
 
 // 练习 14：Promise.race（先失败者决定）
 console.log('\n===== 练习 14 =====')
 Promise.race([
   new Promise((_, rej) => setTimeout(() => rej(new Error('先失败')), 10)),
-  new Promise((res) => setTimeout(() => res('后成功'), 50)),
-]).then((v) => console.log(v))
-  .catch((e) => console.log('race catch:', e.message))
+  new Promise(res => setTimeout(() => res('后成功'), 50)),
+])
+  .then(v => console.log(v))
+  .catch(e => console.log('race catch:', e.message))
 // 输出什么？
 
 // 练习 15：Promise.any（第一个成功）
 console.log('\n===== 练习 15 =====')
-Promise.any([
-  Promise.reject('失败1'),
-  Promise.resolve('成功'),
-  Promise.reject('失败2'),
-]).then((v) => console.log('any:', v))
-  .catch((e) => console.log('any catch:', e.errors))
+Promise.any([Promise.reject('失败1'), Promise.resolve('成功'), Promise.reject('失败2')])
+  .then(v => console.log('any:', v))
+  .catch(e => console.log('any catch:', e.errors))
 // 输出什么？
 
 // ========== 四、Promise 与事件循环 ==========
@@ -175,7 +188,7 @@ console.log('\n===== 练习 17 =====')
 async function f() {
   return 1
 }
-f().then((v) => console.log('async 返回值:', v))
+f().then(v => console.log('async 返回值:', v))
 // 输出什么？
 
 // 练习 18：await 的微任务本质（顺序）
@@ -193,10 +206,12 @@ console.log('4')
 // 练习 19：await 串行 vs Promise.all 并行
 console.log('\n===== 练习 19 =====')
 function delay(name, ms) {
-  return new Promise((res) => setTimeout(() => {
-    console.log(name)
-    res()
-  }, ms))
+  return new Promise(res =>
+    setTimeout(() => {
+      console.log(name)
+      res()
+    }, ms),
+  )
 }
 async function serial() {
   await delay('串行1', 30)
@@ -226,6 +241,24 @@ h()
 // 练习 21：同一个 Promise 加多个 then（互不影响）
 console.log('\n===== 练习 21 =====')
 const p21 = Promise.resolve(1)
-p21.then((x) => console.log('A:', x))
-p21.then((x) => console.log('B:', x))
+p21.then(x => console.log('A:', x))
+p21.then(x => console.log('B:', x))
 // 输出什么？A 和 B 各自拿到什么值？
+
+// ========== 七、较新的静态方法 ==========
+
+// 练习 22：Promise.withResolvers（ES2024，外部控制状态）
+console.log('\n===== 练习 22 =====')
+const { promise: p22, resolve: res22 } = Promise.withResolvers()
+p22.then(v => console.log('withResolvers 结果:', v))
+res22('由外部决定')
+// 输出什么？如果改成 res22 换成 reject('外部失败') 会怎样？
+
+// 练习 23：Promise.try（统一同步 / 异步错误）
+console.log('\n===== 练习 23 =====')
+function riskySync() {
+  throw new Error('同步错误')
+}
+// 对比：下面用 Promise.try 能接住同步错误
+Promise.try(riskySync).catch(e => console.log('try 接住:', e.message))
+// 输出什么？如果改成 Promise.resolve(riskySync()) 会怎样（会未捕获）？

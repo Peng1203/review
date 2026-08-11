@@ -128,6 +128,7 @@ outer.then((v) => console.log(v)) // 'inner 的值'（不是 inner 这个 Promis
 **本节重点**：三种状态、状态不可逆、executor 同步、resolve/reject 一次生效。
 
 **思考题**：
+
 1. `new Promise((resolve) => resolve(1)).then(() => resolve(2))` 能第二次改变结果吗？为什么？
 2. 为什么不直接用回调，而要用 Promise 包一层？
 
@@ -213,6 +214,7 @@ p.finally(() => console.log('无论成败都执行'))
 ```
 
 **要点**：
+
 - `finally` 的回调**不接收 value / reason**（拿不到结果）
 - `finally` 返回新 Promise，**原结果会透传**——除非你在 `finally` 里 `return Promise.reject(...)` 或 `throw`，那会**覆盖**原结果
 
@@ -229,12 +231,13 @@ Promise.resolve('原值')
 **本节重点**：then 永远返回新 Promise；4 种返回值规则；错误冒泡；catch 后恢复；finally 不接收值但能覆盖结果。
 
 **思考题**：
+
 1. `Promise.resolve(1).then(() => 2).then((x) => console.log(x))` 打印什么？中间那次 `.then` 做了什么？
 2. `Promise.reject('e').catch(() => {}).then((x) => console.log(x))` 打印什么？为什么？
 
 ---
 
-# 第三节：静态方法（Promise.all / allSettled / race / any）
+# 第三节：静态方法（resolve / reject / all / allSettled / race / any / withResolvers / try）
 
 ## 1. Promise.resolve / reject
 
@@ -302,18 +305,73 @@ Promise.any([p1, p2, p3])
 - 全部 `rejected` 才整体 `rejected`，且 reason 是 `AggregateError`（包含所有失败原因）
 - 适合"多个数据源竞速，取最快成功的"（如 CDN 竞速）
 
-## 6. 四个静态方法对比
+## 6. Promise.withResolvers（ES2024 新增）
 
-| 方法 | 成功条件 | 失败条件 | 结果 |
-|---|---|---|---|
-| `all` | 全部成功 | 任一个失败（取第一个失败） | 成功值的数组 |
-| `allSettled` | 全部落定（不论成败） | 永不失败 | 状态+值/原因 的数组 |
-| `race` | 第一个落定且成功 | 第一个落定且失败 | 第一个落定者 |
-| `any` | 第一个成功 | 全部失败（AggregateError） | 第一个成功者 |
+> 一个常被遗漏、但非常实用的静态方法。
 
-**本节重点**：四个静态方法的成功/失败语义差异；all 的失败短路；any 的 AggregateError。
+过去想在 Promise **外部**控制其状态（延迟决定成功/失败），要写样板：
+
+```javascript
+let resolve, reject
+const p = new Promise((res, rej) => {
+  resolve = res
+  reject = rej
+})
+// 之后在别处调用 resolve(x) / reject(e)
+```
+
+`Promise.withResolvers()` 一行搞定，返回 `{ promise, resolve, reject }`：
+
+```javascript
+const { promise, resolve, reject } = Promise.withResolvers()
+
+setTimeout(() => resolve('完成'), 1000) // 在外部控制状态
+promise.then((v) => console.log(v))     // '完成'
+```
+
+**本质**：它和 `new Promise` + 手动保存控制函数**完全等价**，只是语言内置了语法糖——少写样板、避免把 `resolve/reject` 泄露到外层作用域。
+
+**典型场景**：
+
+- 把"事件驱动"包装成 Promise（如监听一次 `message` 后 resolve）
+- 实现取消令牌（cancel token）：外部 `reject` 即可让等待方进入 catch
+- 任务队列 / 信号量中，由调度器决定何时 resolve
+
+```javascript
+function waitForMessage(ws) {
+  const { promise, resolve } = Promise.withResolvers()
+  ws.once('message', (data) => resolve(data))
+  return promise
+}
+```
+
+## 7. Promise.try（较新，统一同步 / 异步错误）
+
+`Promise.try(fn)` 等价于 `new Promise((resolve) => resolve(fn()))`，但语义更清晰：**无论 `fn` 是同步抛错还是返回 Promise，错误都被统一收进 Promise 的 rejection**，不会像直接 `Promise.resolve(fn())` 那样把同步异常变成未捕获异常。
+
+```javascript
+// 反例：同步抛错会逃出 Promise 链，catch 接不住
+Promise.resolve(riskySync()).catch(...) // riskySync 直接抛错 → 未捕获
+
+// 正例：Promise.try 把同步异常也收进链
+Promise.try(riskySync).catch((e) => console.log(e)) // 能接住 ✓
+```
+
+> 状态：已进入标准（ES2025 前后落地，注意运行环境兼容性）。它和 `Promise.withResolvers` 一样，是"补全 Promise 工具箱"的新成员。
+
+## 8. 四个静态方法对比
+
+| 方法           | 成功条件       | 失败条件                 | 结果          |
+| ------------ | ---------- | -------------------- | ----------- |
+| `all`        | 全部成功       | 任一个失败（取第一个失败）        | 成功值的数组      |
+| `allSettled` | 全部落定（不论成败） | 永不失败                 | 状态+值/原因 的数组 |
+| `race`       | 第一个落定且成功   | 第一个落定且失败             | 第一个落定者      |
+| `any`        | 第一个成功      | 全部失败（AggregateError） | 第一个成功者      |
+
+**本节重点**：六个静态方法（resolve/reject 与 all/allSettled/race/any，以及较新的 withResolvers / try）的成功/失败语义差异；all 的失败短路；any 的 AggregateError；withResolvers 用于在外部控制 Promise 状态。
 
 **思考题**：
+
 1. `Promise.all([Promise.resolve(1), Promise.reject('e'), Promise.resolve(3)])` 结果是什么？
 2. 要"等所有请求都结束，逐个处理成功和失败"，用哪个方法？
 
@@ -448,6 +506,7 @@ for await (const item of asyncIterable) {
 **本节重点**：async 必返回 Promise；await 暂停并取 value；非 Promise 自动包装；await 后续是微任务；串行 vs 并行用 Promise.all。
 
 **思考题**：
+
 1. `async function f(){ return await Promise.resolve(1) }` 和 `async function f(){ return Promise.resolve(1) }` 区别？
 2. 如何把"依次请求 3 个接口"改成并发？
 
@@ -455,16 +514,16 @@ for await (const item of asyncIterable) {
 
 # 第六节：常见陷阱与易混淆（必看）
 
-| 陷阱 | 正确理解 |
-|---|---|
-| `then` 返回原 Promise | 错，返回**新** Promise，链式依赖结果传递 |
-| executor 是异步的 | 错，executor **同步**执行 |
-| `resolve` 后可再 `reject` | 错，状态冻结，第二次调用无效 |
-| `catch` 后链路断了 | 错，`catch` 返回新 Promise，没抛错则后续 `.then` 恢复 |
-| `finally` 能拿到 value | 错，`finally` 回调不接收参数 |
-| `finally` 永远不改变结果 | 错，若 `finally` 里 `throw`/`return rejected` 会**覆盖** |
-| `Promise.all` 等全部完成 | 错，`all` 是**失败即短路**；要等都完成用 `allSettled` |
-| `await` 是阻塞整个线程 | 错，`await` 只暂停当前 async 函数，让出主线程（微任务） |
+| 陷阱                           | 正确理解                                                 |
+| ---------------------------- | ---------------------------------------------------- |
+| `then` 返回原 Promise           | 错，返回**新** Promise，链式依赖结果传递                           |
+| executor 是异步的                | 错，executor **同步**执行                                  |
+| `resolve` 后可再 `reject`       | 错，状态冻结，第二次调用无效                                       |
+| `catch` 后链路断了                | 错，`catch` 返回新 Promise，没抛错则后续 `.then` 恢复              |
+| `finally` 能拿到 value          | 错，`finally` 回调不接收参数                                  |
+| `finally` 永远不改变结果            | 错，若 `finally` 里 `throw`/`return rejected` 会**覆盖**    |
+| `Promise.all` 等全部完成          | 错，`all` 是**失败即短路**；要等都完成用 `allSettled`               |
+| `await` 是阻塞整个线程              | 错，`await` 只暂停当前 async 函数，让出主线程（微任务）                  |
 | 多个 `then` 共享一个 Promise 会各自运行 | 对，但注意：同一个 Promise 加多个 `then`，每个 `then` 独立收到原结果（不是链式） |
 
 最后一个陷阱示例：
@@ -524,6 +583,7 @@ Promise 的行为由 **Promises/A+ 规范** 定义（不是 ES 规范本身，�
 - `then` 的 `onFulfilled` 返回值若为 thenable，必须展开（2.3）
 
 **源码学习建议**（不一次啃完）：
+
 - 先手写一个**最简 Promise**（实现 executor / resolve / then 的异步调度与值传递），这是理解最深的路径
 - 再读规范：搜索 "Promises/A+"，重点看 2.3 的 thenable 处理
 
@@ -544,7 +604,7 @@ Promise
 ├─ then/catch/finally 都返回新 Promise
 │   └─ 返回值规则：普通值/返回Promise/抛错/不返回
 ├─ 错误冒泡到最近 catch，catch 后可恢复
-├─ 静态方法：resolve/reject/all/allSettled/race/any
+├─ 静态方法：resolve/reject/all/allSettled/race/any/withResolvers/try
 ├─ .then 回调是微任务（连接 Event Loop）
 └─ async/await = Promise 的语法糖
     ├─ async 必返回 Promise
@@ -575,4 +635,5 @@ Promise
 
 - 想深究原理：手写 Promise + 读 Promises/A+ 规范 2.3
 - 想横向扩展：进入路线图下一阶段——**浏览器 / 网络**（HTTP、fetch 全生命周期、CORS），这些和 Promise 天然衔接
-- 或回头把 `CLAUDE.md` 里 `Promise` / `async-await` 的 `[ ]` 勾成 `[x]`
+
+
