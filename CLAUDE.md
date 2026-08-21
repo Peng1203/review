@@ -299,8 +299,8 @@ Event Loop
 - [x] 闭包
 - [x] 执行上下文
 - [x] Event Loop
-- [ ] Promise
-- [ ] async / await
+- [x] Promise
+- [x] async / await
 - [ ] 垃圾回收
 - [ ] V8 编译流水线（Parser → AST → Ignition → TurboFan）
 - [ ] 隐藏类与内联缓存
